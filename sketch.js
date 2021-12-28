@@ -153,7 +153,7 @@ var sunEarthModel = false
 function setupPolygon(){
   sunEarthModel = false
   WORLD.removeAllObjects()
-  slider = createSlider(1, 500, 2, 1);
+  slider = createSlider(1, 500, 10, 1);
   slider.position(50, 80);
   slider.style('width', '500px');
 
