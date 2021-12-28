@@ -1,5 +1,5 @@
 class PhysicsWorld{
-  G = 6.67e-11
+  G = 6.67
   objects = []
 
   gravity_force(m1, m2, r){
@@ -28,21 +28,26 @@ class PhysicsWorld{
     }
     line(prevObj.pos.x, prevObj.pos.y, firstObj.pos.x, firstObj.pos.y);
   }
-
+  nextStep(dt){
+    for(let obj of this.objects){
+      obj.update(dt / 1000)
+    }
+  }
   render(){
     for(let obj of this.objects){
-      obj.update(deltaTime)
+      obj.update(deltaTime / 1000)
     }
   }
 }
 
 class PhysicsObject{
-  constructor(name, pos, radius, shape, mass, velocity, fixed){
+  constructor(name, pos, radius, shape, color, mass, velocity, fixed){
     pos.add(windowWidth / 2, windowHeight / 2, 0) // put them in the center
 	  this.name = name
     this.pos = pos || createVector(0,0,0)
     this.radius = radius || 1
     this.shape = shape
+    this.color = color
     this.mass = mass || 1
     this.vel = velocity
     this.acc = createVector(0,0,0)
@@ -62,7 +67,7 @@ class PhysicsObject{
     this.net_force = f
   }
   update_acceleration(dt){
-    this.acc = p5.Vector.mult(this.net_force, this.mass)
+    this.acc = p5.Vector.div(this.net_force, this.mass)
   }
   update_velocity(dt){
     this.vel.add(p5.Vector.mult(this.acc, dt))
@@ -74,14 +79,14 @@ class PhysicsObject{
     this.vel = velocity
   }
   update(dt){
-    if(this.fixed !== true){
-      this.calculate_forces()
-      this.update_acceleration(dt)
-      this.update_velocity(dt)
-      this.update_pos(dt)
-    }
+    this.calculate_forces()
+    this.update_acceleration(dt)
+    this.update_velocity(dt)
+    this.update_pos(dt)
 
+    fill(this.color)
     this.shape(this.pos.x, this.pos.y, this.radius)
+    fill(0)
   }
   
 }
@@ -98,11 +103,11 @@ function buildPolygon(r, n){
     const xPos = r * cos(phi*i)
     const yPos = r * sin(phi*i)
 
-    const po =new PhysicsObject(`vertex${i}`, createVector(xPos, yPos, 0), 10, circle, m_i, createVector(0,0,0))
+    const po =new PhysicsObject(`vertex${i}`, createVector(xPos, yPos, 0), 10, circle, color(0, 0, 0), m_i, createVector(0,0,0))
     WORLD.addObject(po)
   }
 }
-var mass = 6e3
+var mass = 10000
 let slider;
 var WORLD;
 var sliderValue = 0;
@@ -125,36 +130,80 @@ function setup() {
   angleMode(DEGREES);
   textSize(32);
   strokeWeight(2)
-  WORLD = new PhysicsWorld()
-  slider = createSlider(1, 500, 6, 1);
-  slider.position(50, 10);
-  slider.style('width', '500px');
 
+  button = createButton('Change to Sun Earth configuration');
+  button.position(0, 0);
+  button.mousePressed(setupSunEarth);
+
+  button = createButton('Change to Polygon configuration');
+  button.position(0, 50);
+  button.mousePressed(setupPolygon);
+  WORLD = new PhysicsWorld()
+
+  if(sunEarthModel){
+    setupSunEarth()
+  }else{
+    setupPolygon()
+  }
 }
 
 var r = 300
+var sunEarthModel = false
+
+function setupPolygon(){
+  sunEarthModel = false
+  WORLD.removeAllObjects()
+  slider = createSlider(1, 500, 2, 1);
+  slider.position(50, 80);
+  slider.style('width', '500px');
+
+  buildPolygon(r, sliderValue)
+  setOrbitalVelocities(r)
+}
+function setupSunEarth(){
+  sunEarthModel = true
+  slider.remove()
+  WORLD.removeAllObjects()
+
+  const po = new PhysicsObject(`sun`, createVector(0, 0, 0), 30, circle, color(0, 0, 0), 900989, createVector(0,0,0))
+  WORLD.addObject(po)
+
+  const po1 = new PhysicsObject(`planet`, createVector(300, 0, 0), 10, circle, color(255, 0, 0), 5972, createVector(0,0,0))
+  WORLD.addObject(po1)
+
+  setOrbitalVelocities(300)
+}
 
 function draw() {
   background(220);
-  let newSliderValue = slider.value();
-  text(`${newSliderValue}`, 10, 30);
 
-  if(newSliderValue != sliderValue){
-    WORLD.removeAllObjects()
-    sliderValue = newSliderValue
-    buildPolygon(r, sliderValue)
-    setOrbitalVelocities(r)
-  }
-  
   // reference circle
   fill(220)
   stroke(color(255, 204, 0))
   circle(windowWidth / 2, windowHeight / 2, r * 2)
 
-  stroke(0)
   fill(0)
+  stroke(0)
 
+  if(sunEarthModel == false){
+    let newSliderValue = slider.value()
+    stroke(0);
+    fill(0)
+    text(`${newSliderValue}`, 10, 100);
+  
+    if(newSliderValue != sliderValue){
+      WORLD.removeAllObjects()
+      sliderValue = newSliderValue
+      buildPolygon(r, sliderValue)
+      setOrbitalVelocities(r)
+    }
+    
+    stroke(0)
+    fill(0)
+
+  }
   WORLD.render()
   WORLD.drawLinesBetweenObjects()
+  
 }
 
