@@ -1,5 +1,5 @@
 class PhysicsWorld{
-  G = 6.67
+  G = 6 // 6.67e-11 is too small! and floating-point errors are not cool
   objects = []
 
   gravity_force(m1, m2, r){
@@ -28,11 +28,7 @@ class PhysicsWorld{
     }
     line(prevObj.pos.x, prevObj.pos.y, firstObj.pos.x, firstObj.pos.y);
   }
-  nextStep(dt){
-    for(let obj of this.objects){
-      obj.update(dt / 1000)
-    }
-  }
+
   render(){
     for(let obj of this.objects){
       obj.update(deltaTime / 1000)
@@ -57,16 +53,19 @@ class PhysicsObject{
   getPos(){
     return p5.Vector.sub(this.pos, createVector(windowWidth / 2, windowHeight / 2, 0))
   }
+  distance_vector(obj1, obj2){
+    return p5.Vector.sub(obj2.pos, obj1.pos)
+  }
   calculate_forces(){
     let f = createVector(0,0,0)
     const others = this.world.objects.filter(obj => obj.name !== this.name)
     for(let obj of others){
-      let force = this.world.gravity_force(this.mass, obj.mass, distance_vector(this, obj))
+      let force = this.world.gravity_force(this.mass, obj.mass, this.distance_vector(this, obj))
       f.add(force)
     }
     this.net_force = f
   }
-  update_acceleration(dt){
+  update_acceleration(){
     this.acc = p5.Vector.div(this.net_force, this.mass)
   }
   update_velocity(dt){
@@ -80,19 +79,14 @@ class PhysicsObject{
   }
   update(dt){
     this.calculate_forces()
-    this.update_acceleration(dt)
+    this.update_acceleration()
     this.update_velocity(dt)
     this.update_pos(dt)
 
     fill(this.color)
     this.shape(this.pos.x, this.pos.y, this.radius)
-    fill(0)
   }
   
-}
-
-const distance_vector = (obj1, obj2) => {
-  return p5.Vector.sub(obj2.pos, obj1.pos)
 }
 
 function buildPolygon(r, n){
@@ -107,15 +101,22 @@ function buildPolygon(r, n){
     WORLD.addObject(po)
   }
 }
-var mass = 10000
+
+var mass = 3000
 let slider;
 var WORLD;
 var sliderValue = 0;
 
 function setOrbitalVelocities(r){
 
+  // sum = 0
+  // for(let i = 1; i < WORLD.objects.length - 1;i++){
+  //     sum += 1/sin(i*180/sliderValue)
+  // }
+
   for(let obj of WORLD.objects){
     obj.calculate_forces()
+    // const velocity_magnitude = WORLD.G*obj.mass*1/4*1/r*1/(sliderValue - 1)*sum
     const velocity_magnitude = sqrt(obj.net_force.mag() * r / obj.mass)
 
     const v0 = obj.getPos().copy()
@@ -165,13 +166,13 @@ function setupSunEarth(){
   slider.remove()
   WORLD.removeAllObjects()
 
-  const po = new PhysicsObject(`sun`, createVector(0, 0, 0), 30, circle, color(0, 0, 0), 900989, createVector(0,0,0))
+  const po = new PhysicsObject(`sun`, createVector(0, 0, 0), 30, circle, color(255, 155, 0), 900989, createVector(0,0,0))
   WORLD.addObject(po)
 
-  const po1 = new PhysicsObject(`planet`, createVector(300, 0, 0), 10, circle, color(255, 0, 0), 5972, createVector(0,0,0))
+  const po1 = new PhysicsObject(`planet`, createVector(300, 0, 0), 10, circle, color(0, 0, 255), 5972, createVector(0,0,0))
   WORLD.addObject(po1)
 
-  setOrbitalVelocities(300)
+  setOrbitalVelocities(r)
 }
 
 function draw() {
@@ -179,7 +180,7 @@ function draw() {
 
   // reference circle
   fill(220)
-  stroke(color(255, 204, 0))
+  stroke(color(155, 155, 155))
   circle(windowWidth / 2, windowHeight / 2, r * 2)
 
   fill(0)
@@ -197,9 +198,6 @@ function draw() {
       buildPolygon(r, sliderValue)
       setOrbitalVelocities(r)
     }
-    
-    stroke(0)
-    fill(0)
 
   }
   WORLD.render()
